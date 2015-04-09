@@ -169,6 +169,8 @@ class DropoutLayer : public NeuronLayer<Dtype> {
 
   virtual inline const char* type() const { return "Dropout"; }
 
+  virtual inline int ExactNumBottomBlobs() const { return -1; }
+  virtual inline int ExactNumTopBlobs() const { return -1; }
  protected:
   /**
    * @param bottom input Blob vector (length 1)
@@ -357,8 +359,13 @@ class ReLULayer : public NeuronLayer<Dtype> {
   explicit ReLULayer(const LayerParameter& param)
       : NeuronLayer<Dtype>(param) {}
 
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
   virtual inline const char* type() const { return "ReLU"; }
 
+  virtual inline int ExactNumBottomBlobs() const { return -1; }
+  virtual inline int ExactNumTopBlobs() const { return -1; }
  protected:
   /**
    * @param bottom input Blob vector (length 1)

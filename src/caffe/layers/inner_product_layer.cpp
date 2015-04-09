@@ -47,9 +47,11 @@ void InnerProductLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   // Figure out the dimensions
   M_ = bottom[0]->num();
-  CHECK_EQ(bottom[0]->count() / bottom[0]->num(), K_) << "Input size "
-    "incompatible with inner product parameters.";
-  top[0]->Reshape(bottom[0]->num(), N_, 1, 1);
+  for (int i = 0; i < bottom.size(); ++i) {
+    CHECK_EQ(bottom[i]->count() / bottom[i]->num(), K_) << "Input size "
+      "incompatible with inner product parameters.";
+    top[i]->Reshape(bottom[i]->num(), N_, 1, 1);
+  }
   // Set up the bias multiplier
   if (bias_term_) {
     bias_multiplier_.Reshape(1, 1, 1, M_);
