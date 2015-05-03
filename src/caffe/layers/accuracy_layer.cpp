@@ -14,6 +14,12 @@ template <typename Dtype>
 void AccuracyLayer<Dtype>::LayerSetUp(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   top_k_ = this->layer_param_.accuracy_param().top_k();
+  has_ignore_label_ =
+    this->layer_param_.loss_param().has_ignore_label();
+  if (has_ignore_label_) {
+    ignore_label_ = this->layer_param_.loss_param().ignore_label();
+    ignore_mode_ = this->layer_param_.loss_param().ignore_mode();
+  }
 }
 
 template <typename Dtype>
@@ -43,14 +49,23 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     // Top-k accuracy
     std::vector<std::pair<Dtype, int> > bottom_data_vector;
     for (int j = 0; j < dim; ++j) {
+      if (has_ignore_label_) {
+        if ((ignore_mode_ == 1 && j > ignore_label_) ||
+            (ignore_mode_ == 2 && j == ignore_label_) ||
+            (ignore_mode_ == 3 && j < ignore_label_)) {
+          bottom_data_vector.push_back(std::make_pair(-9999, j));
+          continue;
+        }
+      }
       bottom_data_vector.push_back(
-          std::make_pair(bottom_data[i * dim + j], j));
+        std::make_pair(bottom_data[i * dim + j], j));
     }
     std::partial_sort(
         bottom_data_vector.begin(), bottom_data_vector.begin() + top_k_,
         bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
     // check if true label is in top k predictions
     for (int k = 0; k < top_k_; k++) {
+      // printf("pred = %d, label = %d\n",  bottom_data_vector[k].second, static_cast<int>(bottom_label[i]));
       if (bottom_data_vector[k].second == static_cast<int>(bottom_label[i])) {
         ++accuracy;
         break;

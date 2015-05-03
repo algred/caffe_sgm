@@ -343,6 +343,10 @@ message TransformationParameter {
 message LossParameter {
   // If specified, ignore instances with the given label.
   optional int32 ignore_label = 1;
+  // Ignores labels > ignore_label if equal to 1
+  // Ignores labels == ignore_label if equal to 2
+  // Ignores labels < ignore_label if equal to 3
+  optional int32 ignore_mode = 3;
   // If true, normalize each batch across all instances (including spatial
   // dimesions, but not ignored instances); else, divide by batch size only.
   optional bool normalize = 2 [default = true];

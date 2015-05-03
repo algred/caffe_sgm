@@ -26,6 +26,7 @@ void SoftmaxWithLossLayer<Dtype>::LayerSetUp(
     this->layer_param_.loss_param().has_ignore_label();
   if (has_ignore_label_) {
     ignore_label_ = this->layer_param_.loss_param().ignore_label();
+    ignore_mode_ = this->layer_param_.loss_param().ignore_mode();
   }
   normalize_ = this->layer_param_.loss_param().normalize();
 }
@@ -55,9 +56,16 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
   Dtype loss = 0;
   for (int i = 0; i < num; ++i) {
     for (int j = 0; j < spatial_dim; j++) {
-      const int label_value = static_cast<int>(label[i * spatial_dim + j]);
-      if (has_ignore_label_ && label_value == ignore_label_) {
-        continue;
+      int label_value = static_cast<int>(label[i * spatial_dim + j]);
+      if (has_ignore_label_) {
+        if ((ignore_mode_ == 1 && label_value > ignore_label_) ||
+            (ignore_mode_ == 2 && label_value == ignore_label_) ||
+            (ignore_mode_ == 3 && label_value < ignore_label_)) {
+          continue;
+        }
+        if (ignore_mode_ == 3) {
+          label_value = label_value - ignore_label_; 
+        } 
       }
       DCHECK_GE(label_value, 0);
       DCHECK_LT(label_value, prob_.channels());
@@ -94,15 +102,22 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     int count = 0;
     for (int i = 0; i < num; ++i) {
       for (int j = 0; j < spatial_dim; ++j) {
-        const int label_value = static_cast<int>(label[i * spatial_dim + j]);
-        if (has_ignore_label_ && label_value == ignore_label_) {
-          for (int c = 0; c < bottom[0]->channels(); ++c) {
-            bottom_diff[i * dim + c * spatial_dim + j] = 0;
+        int label_value = static_cast<int>(label[i * spatial_dim + j]);
+        if (has_ignore_label_) {
+          if ((ignore_mode_ == 1 && label_value > ignore_label_) ||
+              (ignore_mode_ == 2 && label_value == ignore_label_) ||
+              (ignore_mode_ == 3 && label_value < ignore_label_)) {
+            for (int c = 0; c < bottom[0]->channels(); ++c) {
+              bottom_diff[i * dim + c * spatial_dim + j] = 0;
+            }
+            continue;
           }
-        } else {
-          bottom_diff[i * dim + label_value * spatial_dim + j] -= 1;
-          ++count;
+          if (ignore_mode_ == 3) {
+            label_value = label_value - ignore_label_; 
+          } 
         }
+        bottom_diff[i * dim + label_value * spatial_dim + j] -= 1;
+        ++count;
       }
     }
     // Scale gradient

@@ -78,7 +78,10 @@ class AccuracyLayer : public Layer<Dtype> {
     }
   }
 
+  bool has_ignore_label_;
   int top_k_;
+  int ignore_label_;
+  int ignore_mode_;
 };
 
 /**
@@ -751,6 +754,10 @@ class SoftmaxWithLossLayer : public LossLayer<Dtype> {
   bool has_ignore_label_;
   /// The label indicating that an instance should be ignored.
   int ignore_label_;
+  /// Ignores labels > ignore_label_ if equal to 1
+  /// Ignores labels == ignore_label_ if equal to 2
+  /// Ignores labels < ignore_label_ if equal to 3
+  int ignore_mode_;
   /// Whether to normalize the loss by the total number of values present
   /// (otherwise just by the batch size).
   bool normalize_;
