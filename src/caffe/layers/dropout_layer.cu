@@ -56,7 +56,7 @@ void DropoutLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
   for (int i = 0; i < bottom.size(); ++i) {
-    if (propagate_down[0]) {
+    if (propagate_down[i]) {
       const Dtype* top_diff = top[i]->gpu_diff();
       Dtype* bottom_diff = bottom[i]->mutable_gpu_diff();
       if (this->phase_ == TRAIN) {

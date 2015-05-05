@@ -47,8 +47,8 @@ template <typename Dtype>
 void ReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
-  if (propagate_down[0]) {
-      for (int i = 0; i < bottom.size(); ++i) {
+  for (int i = 0; i < bottom.size(); ++i) {
+    if (propagate_down[i]) {
         const Dtype* bottom_data = bottom[i]->gpu_data();
         const Dtype* top_diff = top[i]->gpu_diff();
         Dtype* bottom_diff = bottom[i]->mutable_gpu_diff();

@@ -31,21 +31,21 @@ void InnerProductLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
   for (int i = 0; i < bottom.size(); ++i) {
-    if (this->param_propagate_down_[i]) {
+    if (this->param_propagate_down_[0]) {
       const Dtype* top_diff = top[i]->gpu_diff();
       const Dtype* bottom_data = bottom[i]->gpu_data();
       // Gradient with respect to weight
       caffe_gpu_gemm<Dtype>(CblasTrans, CblasNoTrans, N_, K_, M_, (Dtype)1.,
-          top_diff, bottom_data, (Dtype)0., this->blobs_[0]->mutable_gpu_diff());
+          top_diff, bottom_data, (Dtype)1., this->blobs_[0]->mutable_gpu_diff());
     }
     if (bias_term_ && this->param_propagate_down_[1]) {
       const Dtype* top_diff = top[i]->gpu_diff();
       // Gradient with respect to bias
       caffe_gpu_gemv<Dtype>(CblasTrans, M_, N_, (Dtype)1., top_diff,
-          bias_multiplier_.gpu_data(), (Dtype)0.,
+          bias_multiplier_.gpu_data(), (Dtype)1.,
           this->blobs_[1]->mutable_gpu_diff());
     }
-    if (propagate_down[0]) {
+    if (propagate_down[i]) {
       const Dtype* top_diff = top[i]->gpu_diff();
       // Gradient with respect to bottom data
       caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, M_, K_, N_, (Dtype)1.,

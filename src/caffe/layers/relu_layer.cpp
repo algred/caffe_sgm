@@ -34,13 +34,13 @@ void ReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
   for (int i = 0; i < bottom.size(); ++i) {
-    if (propagate_down[0]) {
+    if (propagate_down[i]) {
       const Dtype* bottom_data = bottom[i]->cpu_data();
       const Dtype* top_diff = top[i]->cpu_diff();
       Dtype* bottom_diff = bottom[i]->mutable_cpu_diff();
       const int count = bottom[i]->count();
       Dtype negative_slope = this->layer_param_.relu_param().negative_slope();
-      for (int j = 0; j < count; ++i) {
+      for (int j = 0; j < count; ++j) {
         bottom_diff[j] = top_diff[j] * ((bottom_data[j] > 0)
             + negative_slope * (bottom_data[j] <= 0));
       }
