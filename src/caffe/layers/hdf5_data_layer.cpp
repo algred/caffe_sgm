@@ -8,6 +8,7 @@ TODO:
 */
 #include <fstream>  // NOLINT(readability/streams)
 #include <string>
+#include <cstring>
 #include <vector>
 
 #include "hdf5.h"
@@ -42,6 +43,15 @@ void HDF5DataLayer<Dtype>::LoadHDF5FileData(const char* filename) {
     hdf_blobs_[i] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
     hdf5_load_nd_dataset(file_id, this->layer_param_.top(i).c_str(),
         MIN_DATA_DIM, MAX_DATA_DIM, hdf_blobs_[i].get());
+    // Applies data transform to the first blob if required.
+    if (strcmp("data",  this->layer_param_.top(i).c_str()) == 0
+        && this->layer_param_.has_transform_param()) {
+      transform_data = shared_ptr<Blob<Dtype> >(new Blob<Dtype>());
+      transform_data->Reshape(hdf_blobs_[i]->num(), hdf_blobs_[i]->channels(), 
+          hdf_blobs_[i]->height(), hdf_blobs_[i]->width());
+      data_transformer_->Transform(hdf_blobs_[i].get(), transform_data.get()); 
+      data_top = i;
+    }
   }
 
   herr_t status = H5Fclose(file_id);
@@ -58,9 +68,16 @@ void HDF5DataLayer<Dtype>::LoadHDF5FileData(const char* filename) {
 template <typename Dtype>
 void HDF5DataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  // Refuse transformation parameters since HDF5 is totally generic.
-  CHECK(!this->layer_param_.has_transform_param()) <<
-      this->type() << " does not transform data.";
+  data_top = 0;
+  // Initializes data transformer.
+  int crop_size = 0;
+  if (this->layer_param_.has_transform_param()) {
+    data_transformer_.reset(new DataTransformer<Dtype>(
+        this->layer_param_.transform_param(), this->phase_));
+    data_transformer_->InitRand();
+    crop_size = this->layer_param_.transform_param().crop_size();
+  }
+
   // Read the source to parse the filenames.
   const string& source = this->layer_param_.hdf5_data_param().source();
   LOG(INFO) << "Loading list of HDF5 filenames from: " << source;
@@ -89,8 +106,13 @@ void HDF5DataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const int batch_size = this->layer_param_.hdf5_data_param().batch_size();
   const int top_size = this->layer_param_.top_size();
   for (int i = 0; i < top_size; ++i) {
-    top[i]->Reshape(batch_size, hdf_blobs_[i]->channels(),
-                    hdf_blobs_[i]->height(), hdf_blobs_[i]->width());
+    if (crop_size > 0){
+      top[i]->Reshape(batch_size, hdf_blobs_[i]->channels(),
+          crop_size, crop_size);
+    } else {
+      top[i]->Reshape(batch_size, hdf_blobs_[i]->channels(),
+          hdf_blobs_[i]->height(), hdf_blobs_[i]->width());
+    }
   }
 }
 
@@ -112,9 +134,17 @@ void HDF5DataLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     }
     for (int j = 0; j < this->layer_param_.top_size(); ++j) {
       int data_dim = top[j]->count() / top[j]->num();
-      caffe_copy(data_dim,
-          &hdf_blobs_[j]->cpu_data()[current_row_ * data_dim],
-          &top[j]->mutable_cpu_data()[i * data_dim]);
+      if (j == data_top && this->layer_param_.has_transform_param()) {
+        caffe_copy(data_dim,
+            &transform_data->cpu_data()[current_row_ * data_dim],
+            &top[j]->mutable_cpu_data()[i * data_dim]);
+      } else { 
+        caffe_copy(data_dim,
+            &hdf_blobs_[j]->cpu_data()[current_row_ * data_dim],
+            &top[j]->mutable_cpu_data()[i * data_dim]);
+      }
+      printf("hdf_blobs[%d]: dim = %d, val = %f", j, data_dim,
+          (double)(hdf_blobs_[j]->cpu_data()[current_row_ * data_dim]));
     }
   }
 }

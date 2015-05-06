@@ -169,8 +169,11 @@ class HDF5DataLayer : public Layer<Dtype> {
   std::vector<std::string> hdf_filenames_;
   unsigned int num_files_;
   unsigned int current_file_;
+  unsigned int data_top;
   hsize_t current_row_;
   std::vector<shared_ptr<Blob<Dtype> > > hdf_blobs_;
+  shared_ptr<DataTransformer<Dtype> > data_transformer_;
+  shared_ptr<Blob<Dtype> > transform_data;
 };
 
 /**
