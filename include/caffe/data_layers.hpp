@@ -246,6 +246,39 @@ class ImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
 };
 
 /**
+ * @brief Provides compressed optical data to the Net from image files.
+ *
+ * The flow image is in the following format:
+ * channel 1: integer part of horizontal flow
+ * channel 2: integer part of vertical flow
+ * channel 3: first digit of horizontal flow fraction * 10 + first digit
+ *            of vertical flow fraction.
+ */
+template <typename Dtype>
+class FlowDataLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit FlowDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~FlowDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "FlowData"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
+
+ protected:
+  virtual void InternalThreadEntry();
+  virtual void Decompress(const cv::Mat& cv_img,
+      Blob<Dtype>* transformed_blob);
+
+  shared_ptr<Blob<Dtype> > flow_field_;
+  shared_ptr<Blob<Dtype> > flow_stack_;
+  vector<std::pair<std::string, int> > lines_;
+  int lines_id_;
+};
+
+/**
  * @brief Provides data to the Net from memory.
  *
  * TODO(dox): thorough documentation for Forward and proto params.

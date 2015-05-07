@@ -248,7 +248,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 131 (last added: python_param)
+// LayerParameter next available layer-specific ID: 132 (last added: flow_data_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -305,6 +305,7 @@ message LayerParameter {
   optional HDF5OutputParameter hdf5_output_param = 113;
   optional HingeLossParameter hinge_loss_param = 114;
   optional ImageDataParameter image_data_param = 115;
+  optional FlowDataParameter flow_data_param = 131;
   optional InfogainLossParameter infogain_loss_param = 116;
   optional InnerProductParameter inner_product_param = 117;
   optional LRNParameter lrn_param = 118;
@@ -541,6 +542,20 @@ message ImageDataParameter {
   optional bool mirror = 6 [default = false];
   optional string root_folder = 12 [default = ""];
 }
+
+// Message that stores parameters used by FlowDataLayer
+message FlowDataParameter {
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size.
+  optional uint32 batch_size = 2;
+  // Specify how many flow feilds are stacked in one sample.
+  // The number of channels will be stack_size * 2.
+  optional uint32 stack_size = 3 [default = 10];
+  // Specify whether subtract the mean flow.
+  optional bool subtract_mean = 4 [default = true];
+}
+
 
 // Message that stores parameters InfogainLossLayer
 message InfogainLossParameter {
