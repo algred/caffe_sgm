@@ -764,6 +764,7 @@ message V1LayerParameter {
     ELTWISE = 25;
     EXP = 38;
     FLATTEN = 8;
+    FLOW_DATA = 40;
     HDF5_DATA = 9;
     HDF5_OUTPUT = 10;
     HINGE_LOSS = 28;

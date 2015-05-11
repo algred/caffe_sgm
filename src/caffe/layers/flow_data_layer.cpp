@@ -80,8 +80,8 @@ void FlowDataLayer<Dtype>::InternalThreadEntry() {
   FlowDataParameter flow_data_param = this->layer_param_.flow_data_param();
   const int batch_size = flow_data_param.batch_size();
   const int stack_size = flow_data_param.stack_size();
-  const int height = this->prefetch_data_.height();
-  const int width = this->prefetch_data_.width();
+  const int height = flow_field_->height();
+  const int width = flow_field_->width();
   const int data_dim = height * width * 2;
 
   Dtype* prefetch_data = this->prefetch_data_.mutable_cpu_data();
@@ -189,12 +189,16 @@ void FlowDataLayer<Dtype>::Decompress(const cv::Mat& cv_img,
   // Subtracts the mean flow vector if required.
   if (subtract_mean) {
     Dtype mean_u = total_u / count, mean_v = total_v / count;
-    for (int h = 0; h < height; ++h) {
-      for (int w = 0; w < width; ++w) { 
-        transformed_data[h*width + w] -= mean_u;
-        transformed_data[(height + h)*width + w] -= mean_v;
-      }
-    }
+    caffe_add_scalar(height * width, (Dtype)(-1.0 * mean_u), transformed_data);
+    caffe_add_scalar(height * width, (Dtype)(-1.0 * mean_v), 
+        transformed_data + height * width);
+// 
+//     for (int h = 0; h < height; ++h) {
+//       for (int w = 0; w < width; ++w) { 
+//         transformed_data[h*width + w] -= mean_u;
+//         transformed_data[(height + h)*width + w] -= mean_v;
+//       }
+//     }
   }
 }
 INSTANTIATE_CLASS(FlowDataLayer);

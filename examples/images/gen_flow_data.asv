@@ -1,5 +1,0 @@
-for i = 1:5
-    flowim = imread(['000' num2str(i) '_flow.png']);
-    [u(:, :, i), v(:, :, i)] = img2flow(flowim);
-end
-u = reshape(u, size(u
