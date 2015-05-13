@@ -30,6 +30,12 @@ message Datum {
   optional bool encoded = 7 [default = false];
 }
 
+// The DatumVector is simply a way to pass multiple Datum instances
+// around.
+message DatumVector {
+  repeated Datum data = 1;
+}
+
 message FillerParameter {
   // The filler type.
   optional string type = 1 [default = 'constant'];
@@ -248,7 +254,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 132 (last added: flow_data_param)
+// LayerParameter next available layer-specific ID: 133 (last added: image_stack_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -297,6 +303,7 @@ message LayerParameter {
   optional ContrastiveLossParameter contrastive_loss_param = 105;
   optional ConvolutionParameter convolution_param = 106;
   optional DataParameter data_param = 107;
+  optional ImageStackParameter image_stack_param = 132;
   optional DropoutParameter dropout_param = 108;
   optional DummyDataParameter dummy_data_param = 109;
   optional EltwiseParameter eltwise_param = 110;
@@ -409,7 +416,6 @@ message ConvolutionParameter {
   }
   optional Engine engine = 15 [default = DEFAULT];
 }
-
 // Message that stores parameters used by DataLayer
 message DataParameter {
   enum DB {
@@ -439,6 +445,38 @@ message DataParameter {
   optional bool mirror = 6 [default = false];
   // Force the encoded image to have 3 color channels
   optional bool force_encoded_color = 9 [default = false];
+}
+
+// Message that stores parameters used by ImageStackLayer
+message ImageStackParameter {
+  enum DB {
+    LEVELDB = 0;
+    LMDB = 1;
+  }
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size.
+  optional uint32 batch_size = 2;
+  // The rand_skip variable is for the data layer to skip a few data points
+  // to avoid all asynchronous sgd clients to start at the same point. The skip
+  // point would be set as rand_skip * rand(0,1). Note that rand_skip should not
+  // be larger than the number of keys in the database.
+  optional uint32 rand_skip = 3 [default = 0];
+  // Uses random steps when select training samples to make a training batch.
+  // The interval between two consective sample in the batch will be 
+  // rand_step * rand(0,1). Set to 0 if do not use random step.
+  optional uint32 rand_step = 4 [default = 0];
+  optional DB backend = 5 [default = LEVELDB];
+  // Force the encoded image to have 3 color channels
+  optional bool force_encoded_color = 6 [default = true];
+  // Specify the stack size: how many images in one sample.
+  optional uint32 stack_size = 7;
+  // If true the images are optical flow images.
+  optional bool is_flow = 8 [default = false];
+  // Set subtract_mean(i) = true to subtract the mean value 
+  // of each channel in the stacked ith image. 
+  repeated bool subtract_mean = 9;
+
 }
 
 // Message that stores parameters used by DropoutLayer
@@ -554,6 +592,9 @@ message FlowDataParameter {
   optional uint32 stack_size = 3 [default = 10];
   // Specify whether subtract the mean flow.
   optional bool subtract_mean = 4 [default = true];
+  // Set to non-zero to use random step size in the range [0, rand_step] 
+  // between two samples in a batch.
+  optional uint32 rand_step = 5 [default = 0];
 }
 
 

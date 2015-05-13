@@ -92,7 +92,14 @@ void FlowDataLayer<Dtype>::InternalThreadEntry() {
   const int lines_size = lines_.size();
   for (int item_id = 0; item_id < batch_size; ++item_id) {
     CHECK_GT(lines_size, lines_id_ + stack_size - 1);
+    // Takes a step of random size.
+    if (flow_data_param.rand_step()) {
+      unsigned int skip = caffe_rng_rand() % flow_data_param.rand_step();
+      lines_id_ += (skip * stack_size);
+      lines_id_ = lines_id_ % lines_size;
+    }
     prefetch_label[item_id] = lines_[lines_id_].second;
+    
     for (int flow_id = 0; flow_id < stack_size; ++flow_id) {
       // reads a compressed flow field.
       timer.Start();

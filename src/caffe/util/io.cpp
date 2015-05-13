@@ -228,6 +228,103 @@ void CVMatToDatum(const cv::Mat& cv_img, Datum* datum) {
   datum->set_data(buffer);
 }
 
+void CVMatStackToDatum(const vector<cv::Mat> cv_imgs, 
+                       Datum* datum, const int stack_size) {
+  CHECK(cv_imgs.size() == stack_size) << "Image num must equal stack size";
+  CHECK(cv_imgs[0].depth() == CV_8U) << "Image data type must be unsigned byte";
+  datum->set_channels(cv_imgs[0].channels() * stack_size);
+  datum->set_height(cv_imgs[0].rows);
+  datum->set_width(cv_imgs[0].cols);
+  datum->clear_data();
+  datum->clear_float_data();
+  datum->set_encoded(false);
+  int datum_channels = datum->channels();
+  int image_channels = cv_imgs[0].channels();
+  int datum_height = datum->height();
+  int datum_width = datum->width();
+  int datum_size = datum_channels * datum_height * datum_width;
+  int image_size = image_channels * datum_height * datum_width;
+  std::string buffer(datum_size, ' ');
+  for (int n = 0; n < stack_size; ++n) {
+    for (int h = 0; h < datum_height; ++h) {
+      for (int w = 0; w < datum_width; ++w) {
+        const uchar* ptr = cv_imgs[n].ptr<uchar>(h);
+        int img_index = 0;
+        for (int c = 0; c < image_channels; ++c) {
+          int datum_index = (((n * image_channels) + c) * datum_height + h) 
+            * datum_width + w;
+          buffer[datum_index] = static_cast<char>(ptr[img_index++]);
+        }
+      }
+    }
+  }
+  datum->set_data(buffer);
+}
+
+template<typename Dtype>
+void FlowImageToFlowHelper(const cv::Mat& cv_img,
+                     Blob<Dtype>* transformed_blob,
+                     const bool subtract_mean) {
+  const int img_channels = cv_img.channels();
+  const int img_height = cv_img.rows;
+  const int img_width = cv_img.cols;
+
+  const int channels = transformed_blob->channels();
+  const int height = transformed_blob->height();
+  const int width = transformed_blob->width();
+  const int count = height * width;
+
+  CHECK_EQ(channels, 2) << "Flow fileds must have 2 channels";
+  CHECK_EQ(img_channels, 3) << "Flow Image must have 3 channels";
+  CHECK_EQ(height, img_height);
+  CHECK_EQ(width, img_width); 
+
+  CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
+
+  Dtype* transformed_data = transformed_blob->mutable_cpu_data();
+  int u_index, v_index;
+  Dtype total_u = 0.0;
+  Dtype total_v = 0.0;
+  for (int h = 0; h < height; ++h) {
+    const uchar* ptr = cv_img.ptr<uchar>(h);
+    int img_index = 0;
+    for (int w = 0; w < width; ++w) {
+      // Computes the fractions. 
+      Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+      Dtype u_frac = static_cast<Dtype>(floor(static_cast<double>(pixel) / 10.0));
+      Dtype v_frac = (pixel - 10 * u_frac) / 10.0;
+      u_frac = u_frac / 10.0;
+      
+      // Horizontal flow.
+      v_index = (height + h) * width + w;
+      pixel = static_cast<Dtype>(ptr[img_index++]);
+      transformed_data[v_index] = pixel - 127.0;
+
+      // Vertical flow.
+      u_index = h * width + w;
+      pixel = static_cast<Dtype>(ptr[img_index++]);
+      transformed_data[u_index] = pixel - 127.0;
+
+      // Adds in the fraction part.
+      transformed_data[u_index] += u_frac;
+      transformed_data[v_index] += v_frac;
+
+      if (subtract_mean) {
+        // Computes the total.
+        total_u += transformed_data[u_index];
+        total_v += transformed_data[v_index];
+      }
+    }
+  }
+  // Subtracts the mean flow vector if required.
+  if (subtract_mean) {
+    Dtype mean_u = total_u / count, mean_v = total_v / count;
+    caffe_add_scalar(height * width, (Dtype)(-1.0 * mean_u), transformed_data);
+    caffe_add_scalar(height * width, (Dtype)(-1.0 * mean_v), 
+        transformed_data + height * width);
+  }
+}
+
 // Verifies format of data stored in HDF5 file and reshapes blob accordingly.
 template <typename Dtype>
 void hdf5_load_nd_dataset_helper(
@@ -257,6 +354,19 @@ void hdf5_load_nd_dataset_helper(
     (dims.size() > 1) ? dims[1] : 1,
     (dims.size() > 2) ? dims[2] : 1,
     (dims.size() > 3) ? dims[3] : 1);
+}
+template <>
+void FlowImageToFlow<float>(const cv::Mat& cv_img,
+                     Blob<float>* transformed_blob,
+                     const bool subtract_mean) {
+  FlowImageToFlowHelper(cv_img, transformed_blob, subtract_mean);
+}
+
+template <>
+void FlowImageToFlow<double>(const cv::Mat& cv_img,
+                     Blob<double>* transformed_blob,
+                     const bool subtract_mean) {
+  FlowImageToFlowHelper(cv_img, transformed_blob, subtract_mean);
 }
 
 template <>

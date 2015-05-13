@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 #include <string>
+#include <vector>
 
 #include "google/protobuf/message.h"
 #include "hdf5.h"
@@ -137,8 +138,17 @@ cv::Mat ReadImageToCVMat(const string& filename);
 
 cv::Mat DecodeDatumToCVMatNative(const Datum& datum);
 cv::Mat DecodeDatumToCVMat(const Datum& datum, bool is_color);
-
 void CVMatToDatum(const cv::Mat& cv_img, Datum* datum);
+void CVMatStackToDatum(const vector<cv::Mat> cv_imgs, 
+                       Datum* datum, const int stack_size);
+template<typename Dtype>
+void FlowImageToFlowHelper(const cv::Mat& cv_img,
+                     Blob<Dtype>* transformed_blob,
+                     const bool subtract_mean);
+template<typename Dtype>
+void FlowImageToFlow(const cv::Mat& cv_img,
+                     Blob<Dtype>* transformed_blob,
+                     const bool subtract_mean);
 
 template <typename Dtype>
 void hdf5_load_nd_dataset_helper(
