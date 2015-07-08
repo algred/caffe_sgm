@@ -45,6 +45,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
   const bool do_mirror = param_.mirror() && Rand(2);
+  const bool flip_sign = do_mirror && param_.flip_sign();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_uint8 = data.size() > 0;
   const bool has_mean_values = mean_values_.size() > 0;
@@ -105,6 +106,9 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
             static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
         } else {
           datum_element = datum.float_data(data_index);
+        }
+        if (flip_sign) {
+          datum_element = datum_element * -1;
         }
         if (has_mean_file) {
           transformed_data[top_index] =
@@ -215,6 +219,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
   const bool do_mirror = param_.mirror() && Rand(2);
+  const bool flip_sign = do_mirror && param_.flip_sign();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
 
@@ -277,6 +282,9 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
         }
         // int top_index = (c * height + h) * width + w;
         Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+        if (flip_sign) {
+          pixel = pixel * -1;
+        }
         if (has_mean_file) {
           int mean_index = (c * img_height + h_off + h) * img_width + w_off + w;
           transformed_data[top_index] =
@@ -316,6 +324,7 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
   const bool do_mirror = param_.mirror() && Rand(2);
+  const bool flip_sign = do_mirror && param_.flip_sign();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
 
@@ -379,7 +388,11 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
         if (do_mirror) {
           int top_index_w = top_index_h + width - 1;
           for (int w = 0; w < width; ++w) {
-            transformed_data[top_index_w-w] = input_data[data_index_h + w];
+            if(flip_sign){
+              transformed_data[top_index_w-w] = input_data[data_index_h + w] * -1;
+            } else {
+              transformed_data[top_index_w-w] = input_data[data_index_h + w];
+            }
           }
         } else {
           for (int w = 0; w < width; ++w) {
