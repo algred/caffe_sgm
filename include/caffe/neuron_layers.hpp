@@ -661,6 +661,38 @@ class ThresholdLayer : public NeuronLayer<Dtype> {
   Dtype threshold_;
 };
 
+/**
+ * @brief Label re-mapping for samples.
+ */
+template <typename Dtype>
+class LabelRemapLayer : public NeuronLayer<Dtype> {
+ public:
+  /**
+   * @param param provides LabelRemapParameter that contains the label map.
+   */
+  explicit LabelRemapLayer(const LayerParameter& param)
+      : NeuronLayer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "Threshold"; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  /// @brief Not implemented (non-differentiable function)
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+    NOT_IMPLEMENTED;
+  }
+
+  shared_ptr<SyncedMemory> label_map;
+  int* new_label;
+};
+
+
 }  // namespace caffe
 
 #endif  // CAFFE_NEURON_LAYERS_HPP_

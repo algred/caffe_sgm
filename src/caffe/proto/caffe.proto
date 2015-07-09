@@ -254,7 +254,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 133 (last added: image_stack_param)
+// LayerParameter next available layer-specific ID: 134 (last added: label_remap_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -328,6 +328,7 @@ message LayerParameter {
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
   optional WindowDataParameter window_data_param = 129;
+  optional LabelRemapParameter label_remap_param = 133;
 }
 
 // Message that stores parameters used to apply transformation
@@ -971,4 +972,7 @@ message V0LayerParameter {
   optional uint32 concat_dim = 65 [default = 1];
 
   optional HDF5OutputParameter hdf5_output_param = 1001;
+}
+message LabelRemapParameter {
+  repeated int32 new_label = 1;
 }
